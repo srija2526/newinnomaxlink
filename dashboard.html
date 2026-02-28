@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Portfolio Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-white">
+
+<div class="container mt-5">
+    <h2>Portfolio Tracker</h2>
+
+    <!-- File Upload -->
+    <input type="file" id="file" class="form-control mt-3">
+    <button onclick="upload()" class="btn btn-primary mt-2">Upload CSV</button>
+
+    <!-- Summary Cards -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-secondary p-3">
+                <h6>Total Invested</h6>
+                <p id="invested">0</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary p-3">
+                <h6>Total Current</h6>
+                <p id="current">0</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary p-3">
+                <h6>Total Return</h6>
+                <p id="return">0</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary p-3">
+                <h6>Return %</h6>
+                <p id="percent">0%</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Table -->
+    <table class="table table-dark table-striped mt-4">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Stock</th>
+                <th>Qty</th>
+                <th>Buy Price</th>
+                <th>Current Price</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script>
+const baseUrl = "/api/portfolio"; // Matches your PortfolioController mapping
+
+// Upload CSV file
+function upload() {
+    let file = document.getElementById("file").files[0];
+    if (!file) {
+        alert("Please select a CSV file.");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", file);
+
+    fetch(baseUrl + "/upload", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.text())
+    .then(data => {
+        alert(data);
+        loadAll();
+        loadSummary();
+    })
+    .catch(err => alert("Error uploading file: " + err));
+}
+
+// Load summary cards
+function loadSummary() {
+    fetch(baseUrl + "/summary")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("invested").innerText = data.totalInvested.toFixed(2);
+        document.getElementById("current").innerText = data.totalCurrentValue.toFixed(2);
+        document.getElementById("return").innerText = data.totalReturn.toFixed(2);
+        document.getElementById("percent").innerText = data.returnPercentage.toFixed(2) + "%";
+    });
+}
+
+// Load all portfolio entries into table
+function loadAll() {
+    fetch(baseUrl + "/all")
+    .then(res => res.json())
+    .then(data => {
+        let rows = "";
+        data.forEach(p => {
+            rows += `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.stockName}</td>
+                <td>${p.quantity}</td>
+                <td>${p.buyPrice.toFixed(2)}</td>
+                <td>${p.currentPrice.toFixed(2)}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRow(${p.id})">Delete</button>
+                </td>
+            </tr>`;
+        });
+        document.getElementById("tableBody").innerHTML = rows;
+    });
+}
+
+// Delete portfolio entry
+function deleteRow(id) {
+    fetch(baseUrl + "/" + id, { method: "DELETE" })
+    .then(() => {
+        loadAll();
+        loadSummary();
+    })
+    .catch(err => alert("Error deleting entry: " + err));
+}
+
+// Initial load
+loadAll();
+loadSummary();
+</script>
+
+</body>
+</html>
